@@ -1,18 +1,21 @@
+import os
+import sys
+
+sys.path.append("../")
+
 import numpy as np
-import torch
-
-# from chatgpt import ask_gpt
-from sentence_transformers import SentenceTransformer
-
-# Load the vector file
-vector_list = np.load("example/retrieve/embedding.npy")
+from embedding.embedding import init_embedded_model
 
 # Number of top-k vectors to retrieve
-TOP_K = 3
+TOP_K = int(os.environ.get("TOP_K", 5))
+QUESTION = os.environ.get("QUESTION", "How to use the gunion command in FreeBSD?")
 
 
-def convert_url(input_url):
-    parts = input_url.split("/")
+def convert_url(input_path):
+    """
+    Convert file path to possible online url of that document
+    """
+    parts = input_path.split("/")
 
     if len(parts) >= 6 and parts[2] == "doc":
         if parts[3] == "website":
@@ -28,19 +31,15 @@ def convert_url(input_url):
     return new_url
 
 
-def init_model():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Using device:", device)
-    return SentenceTransformer("thenlper/gte-base", device=device)
-
-
 def load_text_file(file_path):
     with open(file_path, "r") as file:
         return file.readlines()
 
 
-# Calculate cosine similarity between two vectors
 def cosine_similarity_vectorized(a, b):
+    """
+    Calculate cosine similarity between two vectors
+    """
     dot_product = np.dot(a, b[0])
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b[0])
@@ -51,6 +50,16 @@ def cosine_similarity_vectorized(a, b):
 
 
 def query(question: str):
+    """
+    Query `TOP_K` sentences according the question.
+    Return related sentences list.
+    """
+    model = init_embedded_model()
+    # Load the vector file
+    vector_list = np.load("../embedding/embedding.npy")
+    chunk_list = load_text_file("../embedding/embedding_texts.txt")
+    path_list = load_text_file("../embedding/chunk_paths.txt")
+
     question_vector = model.encode(question)
 
     similarities = []
@@ -76,17 +85,6 @@ def query(question: str):
     return return_chunks
 
 
-# Initialize the model once
-model = init_model()
-
-# Load text files once
-chunk_list = load_text_file("example/retrieve/embedding_texts.txt")
-path_list = load_text_file("example/retrieve/chunk_paths.txt")
-
-question_list = ["How to use the gunion command in FreeBSD?"]
-
-for question in question_list:
-    print("Current Question:", question)
-    print("Related Chunk Texts:")
-    related_chunks = query(question)
-    # ask_gpt(question, related_chunks)
+print("Current Question:", QUESTION)
+print("Related Chunk Texts:")
+query(QUESTION)

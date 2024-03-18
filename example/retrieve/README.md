@@ -1,28 +1,54 @@
 # Retrieve plugin
 
-This implementation utilizes an open-source embedded model ([gte-base](https://huggingface.co/thenlper/gte-base)) to convert the data into a set of vectors. These vectors are then saved as a file, allowing you to query the top `TOP_K` closest sentences to your question using Cosine Similarity. These retrieved sentences can serve as additional context for your questions, enhancing ChatGPT's ability to provide accurate answers.
+This implementation utilizes an open-source embedded model ([gte-base](https://huggingface.co/thenlper/gte-base)) to convert the data into a set of vectors. Instead of storing the vectors in a vector database, we save them as a file due to the manageable size of the freebsd_data.
 
-You're free to switch out the embedded model or the algorithm used for calculating similarities. Just remember to consider the token limit of the model. We chose the gte-base model because it has shown strong performance on the [MTEB leaderboard](https://huggingface.co/thenlper/gte-base).
+You can query the top TOP_K closest sentences to your question using cosine similarity. These retrieved sentences can provide additional context for your questions, thereby enhancing ChatGPT's ability to provide accurate answers.
 
-This project draws inspiration from the [chatgpt-retrieval-plugin](https://github.com/openai/chatgpt-retrieval-plugin) and achieves similar functionality. However, unlike the plugin, we do not utilize an online vector database. We made this choice because we believe the data is meant solely for your use, and it isn't too extensive in size. Nevertheless, it's worth noting that this project can be easily extended to include a vector database if you needed.
+Feel free to swap out the embedded model or the algorithm used for calculating similarities. Just keep in mind the token limit of the model. We choose the "gte-base" model due to its strong performance on the [MTEB leaderboard](https://huggingface.co/spaces/mteb/leaderboard) and its compact model size.
 
-```
-CHUNK_SIZE = 512
-MIN_CHUNK_LENGTH_TO_EMBED = 50 
-```
+This project draws inspiration from the [chatgpt-retrieval-plugin](https://github.com/openai/chatgpt-retrieval-plugin) and achieves similar functionality. However, unlike the plugin, we do not rely on an online vector database. Nonetheless, it's worth mentioning that this project can be easily expanded to incorporate a vector database if necessary.
 
 ## Installation
 
-```
+``` shell
 $ pip install -r requirements.txt
 ```
 
 ## Usage
 
-Execute `query/query.py` to retrieve relevant sentences related to your queries. This script utilizes `main.py` to obtain embedding vectors.
+### Embedded the freebsd data.
+```shell
+# Set hyperparameter
+$ export CHUNK_SIZE=512 # The target size of each text chunk in tokens, limited to your model input size
+$ export MIN_CHUNK_LENGTH_TO_EMBED=50 # Minimum length threshold for discarding  chunks, in tokens
 
-For those using the ChatGPT API, there is a version called `query/chatgpt.py` that works with it. However, it is essential to provide your OpenAI key as an environment variable (`OPENAIKEY`)
+# Run data.sh first to get clean data
+$ sh data.sh
 
+# Get embedding vectors
+$ cd embedding
+$ python main.py
+```
+
+The general step of `main.py` is to use a tokenizer to split the sentences into proper sizes (`CHUNK_SIZE`). Then, we use the model to embed the split sentences.
+
+### Retrieve related question
+
+```shell
+# Set hyperparameter
+$ export TOP_K=5 # Number of top-k vectors(sentences) to retrieve
+$ export QUESTION="How to use the gunion command in FreeBSD?" # Question to retrieve
+
+# Retrieve
+$ cd query
+$ python query.py
+```
+
+For those using the ChatGPT API, you can use `chatgpt.py` which requires an additional `OPENAIKEY` environment variable.
+
+```shell
+$ export OPENAIKEY="Your key"
+```
 
 ## Contributing
 
